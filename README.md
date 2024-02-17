@@ -673,6 +673,84 @@ Structured Concurrency was an Incubator feature in JDK 19 and JDK 20, re-incubat
 
 Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**). There'll be situations where more mature threading models are still the right choice
 
+Let's craft a **more advanced** example demonstrating the elegance of Structured Concurrency (JEP 437). Note that since Structured Concurrency is still evolving, we'll use the latest preview features
+
+Scenario
+
+Let's build a simplified image processing application that concurrently fetches images from multiple sources, applies transformations, and saves the results
+
+```java
+import java.net.URI;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.StructuredTaskScope;
+
+public class ImageProcessor {
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public void processImages(List<URI> imageUrls) throws Exception {
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            for (URI imageUrl : imageUrls) {
+                scope.fork(() -> processSingleImage(imageUrl));
+            }
+
+            scope.join();           // Block until all subtasks complete
+            scope.throwIfFailed();  // Propagate any exceptions
+        }
+    }
+
+    private void processSingleImage(URI imageUrl) throws Exception {
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            Future<Image> fetchFuture = scope.fork(() -> fetchImage(imageUrl));
+            Future<Image> resizeFuture = scope.fork(() -> resizeImage(fetchFuture.resultNow()));
+            Future<Image> grayscaleFuture = scope.fork(() -> applyGrayscale(fetchFuture.resultNow()));
+
+            scope.join();
+            saveImage(resizeFuture.resultNow());
+            saveImage(grayscaleFuture.resultNow());
+        } 
+    }
+
+    // Placeholder methods for illustration
+    private Image fetchImage(URI imageUrl) { ... } 
+    private Image resizeImage(Image image) { ... }
+    private Image applyGrayscale(Image image) { ... }
+    private void saveImage(Image image) { ... }
+}
+```
+
+**Explanation**
+
+**StructuredTaskScope**: The core of structured concurrency. A StructuredTaskScope defines a parent-child relationship with the tasks it spawns
+
+**fork**: Creates a new subtask within the scope. These subtasks execute concurrently
+
+**ShutdownOnFailure**: This tells the scope to automatically cancel running sibling tasks if one task fails.
+
+**join**: Waits for all tasks within the scope to complete
+
+**throwIfFailed**: Throws an exception if any task within the scope encountered an error
+
+**resultNow()**: Gets a completed Future value, but can throw if the task failed. Ideal within scopes due to error management
+
+**Advantages of Structured Concurrency**
+
+**Error Handling**: Exceptions are automatically propagated, and cleanup of sibling tasks is streamlined
+
+**Cancellation**: If one part of the processing fails, related tasks are canceled. This prevents wasted resources
+
+**Readability**: Nesting of scopes clearly mirrors the logical structure of your concurrent processes
+
+**Notes**
+
+**Preview Feature**: Java Structured Concurrency is a preview feature; API changes are possible in future Java releases
+
+**Placeholders**: You'll need to provide actual implementations for image manipulation
+
+**Performance**: Virtual threads excel in scenarios like this, where tasks spend a lot of time waiting for results (fetching images, saving files)
+
 ## 7. Vector API 5 (JEP 438)
 
 https://openjdk.org/jeps/438
