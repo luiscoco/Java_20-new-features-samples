@@ -243,6 +243,74 @@ Look for another code examples showing:
 
 - Advanced guarded patterns
 
+Let's craft a  **more advanced example** about Java Pattern Matching for switch
+
+**Scenario: Geometric Calculations**
+
+Consider a scenario where you're working with shapes, and you need to calculate properties based on their type
+
+```java
+// Our Records
+record Shape(String type) {}
+record Circle(String type, double radius) extends Shape {}
+record Rectangle(String type, double width, double height) extends Shape {}
+record Triangle(String type, double base, double height) extends Shape {}
+
+public class ShapeCalculations {
+
+    public static String calculate(Shape shape) {
+        return switch (shape) {
+            case Circle(double radius) -> 
+                 "Circle with area: " + (Math.PI * radius * radius);
+
+            case Rectangle(double width, double height) -> 
+                 "Rectangle with area: " + (width * height);
+
+            case Triangle(double base, double height) -> 
+                 "Triangle with area: " + (0.5 * base * height);
+
+            case Shape() -> "Unknown or generic shape"; // Catch-all case
+        };
+    }
+
+    public static static main(String[] args) {
+        Shape shape1 = new Circle("Circle", 2.5);
+        Shape shape2 = new Rectangle("Rectangle", 4, 3);
+
+        System.out.println(calculate(shape1)); 
+        System.out.println(calculate(shape2)); 
+    }
+}
+```
+
+**Breakdown**
+
+Shapes as Records: Our shapes now leverage records, making them natural fits for pattern matching
+
+Calculations within switch: Each case directly extracts attributes and performs the necessary computation
+
+Clarity: Our code directly conveys the intent of what we're doing for each shape type
+
+Handling 'Unknown' Shape: We gracefully deal with cases where the Shape instance isn't specifically a circle, rectangle, or triangle
+
+**Enhancements & Notes**
+
+Sealed Hierarchies: If Shape were a sealed class or interface, the compiler could guarantee we've covered every possible subtype, providing extra safety
+
+Complex Conditions: Pattern matching could incorporate guarded patterns (case Shape s && s.area() > 10 - hypothetical area() method)
+
+Alternatives: While pattern-matching switch shines here, a polymorphic solution ('calculateArea() method on each shape) could be valid in some object-oriented designs
+
+**Even More Advanced?**
+
+We could imagine:
+
+Shapes containing other shapes: Nested pattern matching to deconstruct deeply
+
+Patterns on Strings: Newer Java releases allow this. Imagine pattern matching on an input command in a program
+
+"When Clauses" (Not in Java yet): Other languages extend 'switch' further with conditions directly attached to patterns
+
 ## 3. Scoped Values (JEP 429)
 
 https://openjdk.org/jeps/453
