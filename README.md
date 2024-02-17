@@ -387,7 +387,72 @@ Use scoped values when data needs to be shared across methods in a task or execu
 
 https://openjdk.org/jeps/434
 
+The Java Native Interface (JNI) has been the traditional way to work with code written in languages like C or C++ from within Java. However, JNI has several drawbacks:
 
+Complexity: Writing JNI code is verbose and error-prone. You need to deal with intricate mappings between Java types and native types
+
+Safety: JNI is prone to memory management errors that can lead to crashes and instability within your Java application
+
+Performance: The overhead of switching back and forth between the Java and native worlds can degrade performance
+
+**What is the Foreign Function & Memory API?**
+
+The Foreign Function & Memory API (FFM API) introduced a new, safer, simpler, and more performant way for Java programs to interact with:
+
+**Foreign Functions (code outside the JVM)**: This means calling functions in native libraries (typically written in C/C++ ) directly from your Java code
+
+**Foreign Memory (memory not managed by the JVM)**: This enables Java code to access and manipulate memory located outside the standard Java heap
+
+**Key Benefits**
+
+**Ease of Use**: The FFM API provides a much more streamlined and type-safe interface compared to JNI. Mapping data between Java and native types gets much easier
+
+**Safety**: The API has better memory management controls, significantly reducing the risk of errors that plagued JNI
+
+**Performance**: Avoiding the overhead of JNI calls enhances performance for native code integration
+
+**Flexibility**: You can work with various native libraries, not just ones explicitly designed for JNI
+
+**How It Works (Simplified)**
+
+**Memory Segments**: The API introduces the concept of MemorySegment to represent regions of memory (either on-heap, off-heap, or native memory)
+
+**Memory Layouts**: These are descriptions of how data is structured in memory (e.g., the arrangement of fields in a struct in C)
+
+**Method Handles**: These allow you to invoke native functions as if they were regular Java methods
+
+**Example (Calling a C function)**
+
+```java
+import jdk.incubator.foreign.*;
+
+public class FFMExample {
+    public static void main(String[] args) {
+        try (Linker linker = Linker.nativeLinker()) {
+            SymbolLookup lookup = linker.defaultLookup();
+            MethodHandle absFunc = lookup.find("abs").get();
+            int result = (int) absFunc.invokeExact(-10); 
+            System.out.println(result);  // Output: 10
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**In this example**:
+
+We obtain a Linker to work with native code
+
+We look up the native abs function (from the standard C library)
+
+MethodHandle lets us invoke abs like a Java method
+
+**Important Notes**
+
+The FFM API was first released as an incubator feature in JDK 19, and continues to evolve in new Java versions
+
+Since it's an Incubator feature, you'll likely need to enable it with command-line arguments when working with a Java version supported before it becomes standardized
 
 ## 5. Virtual Threads (JEP 436)
 
