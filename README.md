@@ -313,28 +313,96 @@ Patterns on Strings: Newer Java releases allow this. Imagine pattern matching on
 
 ## 3. Scoped Values (JEP 429)
 
-https://openjdk.org/jeps/453
+https://openjdk.org/jeps/429
 
+**What are Scoped Values?**
 
+Scoped values introduce a new mechanism in Java to share data safely and efficiently within the boundaries of a dynamic scope
+
+Think of a dynamic scope as the active execution path of a task or thread, including any sub-tasks or sub-threads it might create
+
+A scoped value acts like a container that holds a value. Unlike passing data through method parameters, scoped values let you make your data implicitly available down the call chain within this dynamic scope
+
+**Why Scoped Values?**
+
+Cleaner Data Sharing:
+
+Traditional thread-local variables work, but they can make code cumbersome, especially when you have deeply nested method calls
+
+Scoped values are designed to share data directly across this execution path, making your code easier to read and reason about
+
+**Performance (Especially with Virtual Threads)**:
+
+Java's Project Loom aims to introduce lightweight virtual threads
+
+Thread-local variables get tricky in a world with massive numbers of threads
+
+Scoped values are well-suited for efficient data sharing in these scenarios
+
+**Key Concepts**
+
+**ScopedValue Class**: You represent a scoped value using the ScopedValue class
+
+**Binding**: You associate a value to a scoped value using the bind() method
+
+**Scope**: A scope defines the span where a scoped value and its binding are visible – meaning where the value can be accessed. Scopes can be nested
+
+**Immutability**: Values bound to a scoped value should be immutable to ensure thread safety
+
+It's a way to protect against unintended data changes in other parts of the execution path
+
+**Simple Example**
+
+```java
+public class ScopedExample {
+    static final ScopedValue<String> message = new ScopedValue<>();
+
+    public static void main(String[] args) {
+        try (ScopedValue.Handle scope = message.bind("Hello from Scoped Values!")) {
+            new Thread(() -> System.out.println(message.get())).start(); 
+        }
+    }
+}
+```
+
+**Explanation**:
+
+We create a static ScopedValue to hold a String
+
+In main, we bind the message "Hello from Scoped Values!"
+
+The try-with-resources block establishes a scope
+
+We start a new thread, which can still access the value "Hello from Scoped Values!" because it's running within the scope created in the main method
+
+**Remember**
+
+Scoped Values were introduced as an Incubator feature in JDK 19 and re-previewed in JDK 20, 21, and 22
+
+They are still under development and their API might change slightly in the future
+
+Use scoped values when data needs to be shared across methods in a task or execution flow, without direct parameter passing
 
 ## 4. Foreign Function & Memory API (JEP 434)
 
-https://openjdk.org/jeps/453
+https://openjdk.org/jeps/434
 
 
 
 ## 5. Virtual Threads (JEP 436)
 
-https://openjdk.org/jeps/453
+https://openjdk.org/jeps/436
 
 
 
 ## 6. Structured Concurrency (JEP 437)
 
-https://openjdk.org/jeps/453
+https://openjdk.org/jeps/437
 
 
 
 ## 7. Vector API 5 (JEP 438)
 
-https://openjdk.org/jeps/453
+https://openjdk.org/jeps/438
+
+
