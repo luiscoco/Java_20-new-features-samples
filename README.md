@@ -597,7 +597,7 @@ class Response { }
 
 https://openjdk.org/jeps/437
 
-Let's break down Java Structured Concurrency (JEP 437).
+Let's break down Java Structured Concurrency (JEP 437)
 
 The Problem with **Traditional Threads**
 
@@ -672,8 +672,6 @@ try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
 Structured Concurrency was an Incubator feature in JDK 19 and JDK 20, re-incubated in 21, and has recently achieved "Preview" status for JDK 22. This means the API is still evolving and could undergo minor changes
 
 Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**). There'll be situations where more mature threading models are still the right choice
-
-
 
 ## 7. Vector API 5 (JEP 438)
 
