@@ -387,13 +387,13 @@ Use scoped values when data needs to be shared across methods in a task or execu
 
 https://openjdk.org/jeps/434
 
-The Java Native Interface (JNI) has been the traditional way to work with code written in languages like C or C++ from within Java. However, JNI has several drawbacks:
+The **Java Native Interface (JNI)** has been the traditional way to work with code written in languages like C or C++ from within Java. However, JNI has several drawbacks:
 
-Complexity: Writing JNI code is verbose and error-prone. You need to deal with intricate mappings between Java types and native types
+**Complexity**: Writing JNI code is verbose and error-prone. You need to deal with intricate mappings between Java types and native types
 
-Safety: JNI is prone to memory management errors that can lead to crashes and instability within your Java application
+**Safety**: JNI is prone to memory management errors that can lead to crashes and instability within your Java application
 
-Performance: The overhead of switching back and forth between the Java and native worlds can degrade performance
+**Performance**: The overhead of switching back and forth between the Java and native worlds can degrade performance
 
 **What is the Foreign Function & Memory API?**
 
