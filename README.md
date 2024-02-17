@@ -153,7 +153,95 @@ public class ShapeParser {
 
 https://openjdk.org/jeps/453
 
+Let's break down Java **Pattern Matching for switch** introduced in JEP 433 (preview), with further refinements in subsequent JEPs.
 
+**The Traditional switch**
+
+Before, Java's switch focused mainly on primitive types and enums:
+
+```java
+int dayOfWeek = 3;
+switch (dayOfWeek) {
+    case 1: 
+        System.out.println("Monday"); 
+        break;
+    // ... other cases 
+    default: 
+        System.out.println("Unknown day");
+}
+```
+
+**This had limitations**:
+
+Type Checks and Casting: Often you'd have to use instanceof and cast within each case
+
+Repetitive Structure: Boilerplate code to access values after type casting
+
+Pattern Matching for switch Supercharges It
+
+Let's see how it evolves with pattern matching:
+
+```java
+record Point(int x, int y) {}
+
+String describe(Object obj) {
+    return switch (obj) {
+        case Point(int x, int y) -> "Point at coordinates: (" + x + ", " + y + ")";  
+        case null -> "It's null";
+        default -> "Unknown object type";
+    };
+}
+```
+
+**Key Enhancements**
+
+Type Patterns: We can directly check if  obj is a Point using case Point(... ).
+
+Deconstruction: If  obj is a Point, it simultaneously extracts x and y. No separate casting needed!
+
+Guarded Patterns:
+
+```java
+ case Integer i && i > 0 -> "Positive integer"; // Additional conditions
+```
+
+Conciseness: Code within cases becomes less verbose, focusing on what you want to do with the  data, not just extracting it.
+
+**Types of Patterns**
+
+Type Patterns (As seen above)
+
+Null Pattern: A dedicated case null
+
+Guarded Patterns: Add constraints with && or || after a type pattern
+
+Parenthesized Patterns: Mostly for clarity when combining other patterns
+
+**Beyond Basics**
+
+Exhaustiveness: Compiler might help you ensure your switch covers all possible cases of a variable's type
+
+Scope of Variables: Variables introduced in patterns are conveniently scoped to that case block
+
+**When It Shines**
+
+Working with data-centric classes: Especially records, when the structure of your data matters
+
+Hierarchical Data: Patterns can 'reach into' nested structures
+
+Replacing chains of if..else if: Especially if these involve type checks
+
+**Note**: JEP 433 started by enabling this only for instanceof type checks 
+
+Newer Java versions broaden this for String objects and potentially expand the possibilities even further
+
+Look for another code examples showing:
+
+- Type checks with traditional switch vs. pattern matching switch
+
+- Handling nested data structures
+
+- Advanced guarded patterns
 
 ## 3. Scoped Values (JEP 429)
 
