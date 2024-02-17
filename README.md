@@ -491,6 +491,82 @@ While in preview as of JDK 22, virtual threads are on track for standardization.
 
 Debugging requires some care to understand virtual threads vs. the underlying carrier threads
 
+Let's delve into a **more advanced** scenario highlighting the strengths of Java Virtual Threads (JEP 436)
+
+**Scenario: Network Request Processor**
+
+Imagine you're building a high-throughput service that coordinates processing of a constant stream of incoming network requests.  Here's a basic structure:
+
+**Listen**: Constantly accept new incoming requests
+
+**Pre-Process**: Basic validation and transformation of the incoming request data
+
+**External Calls**: Call multiple backend systems (databases, other services) concurrently to fetch the information needed for a response
+
+**Aggregate & Respond**: Combine results from external calls and compose a response sent back to the request initiator
+
+**The Challenge**: Traditional platform thread usage limits scalability due to the potential overhead of blocking I/O during the 'External Calls' step
+
+```java
+import java.util.concurrent.*;
+
+public class RequestProcessor {
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public void start() {
+        // Assuming a hypothetical listenForRequests() method here...
+        while (true) {
+            Request request = listenForRequests(); 
+            executor.submit(() -> processRequest(request)); 
+        }
+    }
+
+    private void processRequest(Request request) {
+        try {
+            var preprocessedData = preProcess(request); 
+
+            // Concurrent external calls using virtual threads 
+            Future<ResultA> futureResultA = executor.submit(() -> callExternalServiceA(preprocessedData));
+            Future<ResultB> futureResultB = executor.submit(() -> callExternalServiceB(preprocessedData)); 
+
+            ResultA resultA = futureResultA.get(); // Will likely yield 
+            ResultB resultB = futureResultB.get(); // May yield too
+
+            Response response = aggregateAndRespond(request, resultA, resultB); 
+            sendResponse(response);
+
+        } catch (Exception e) {
+            handleProcessingError(request, e); 
+        }
+    }
+
+    // ... Helper methods (preProcess, callExternalServiceA, etc.) 
+}
+```
+
+**Why Virtual Threads**
+
+**High Concurrency**: Easily handles thousands of incoming requests, using a pool of carrier threads much smaller than the number of active virtual threads
+
+**Efficient Blocking**: When futureResultA.get() and futureResultB.get() encounter the inevitable network blocking, virtual threads yield gracefully. The carrier thread isn't stalled; it can execute other ready virtual threads
+
+**Simplified Code**: Code appears similar to the synchronous thread-based style due to virtual thread's non-blocking nature, while achieving far superior resource utilization
+
+**Tuning**
+
+**Pool Size**: You'd use Executors.newFixedThreadPool() instead of newVirtualThreadPerTaskExecutor and tune the pool size based on workload and hardware to make sure virtual threads aren't context-switching more than they need to
+
+**Monitoring**: Observability tools will be important to analyze virtual thread scheduling and usage
+
+**Considerations**
+
+**Debug Support**: Tools are actively evolving to provide meaningful tracing and analysis for virtual threads
+
+**Not for CPU-bound Work**: CPU-intensive tasks, without I/O, won't see the dramatic improvements offered by virtual threads
+
+**Want to make it even more advanced?**
+
+We could introduce **timeouts**,  a **non-blocking asynchronous** style using **CompletableFuture** for backend calls,  or add **fault-tolerance** and  **retries** into the mix.
 
 ## 6. Structured Concurrency (JEP 437)
 
