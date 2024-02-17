@@ -646,81 +646,108 @@ try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
 
 Structured Concurrency was an Incubator feature in JDK 19 and JDK 20, re-incubated in 21, and has recently achieved "Preview" status for JDK 22. This means the API is still evolving and could undergo minor changes
 
-Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**).  There'll be situations where more mature threading models are still the right choice
+Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**). There'll be situations where more mature threading models are still the right choice
 
-Let's explore a **more advanced example** showcasing Java's Structured Concurrency (JEP 437). Here's a scenario that demonstrates error handling, cancellation, and the benefits of StructuredTaskScope:
+Let's explore a **more advanced example** showcasing Java's Structured Concurrency (JEP 437)
 
-**Scenario**: Image Processing Application
+Here's a complete application example using your RequestProcessor along with explanations and some placeholder implementations for context
 
-Imagine you're building an image processing application that performs the following:
+**Key Concepts**
 
-**Fetch Images**: Fetch a list of image URLs from a remote server
+**Virtual Threads**: This code leverages virtual threads (Executors.newVirtualThreadPerTaskExecutor()) which are lightweight threads in Java 19 and beyond
 
-**Download**: Download each image in parallel
+They're ideal for I/O bound tasks (like the external service calls)
 
-**Process**: Perform a computationally intensive image processing operation on each image
+**Asynchronous Processing**: Processing requests are submitted to an executor service to run asynchronously, improving responsiveness
 
-**Upload**: Upload the processed images back to the server
+**Futures**: Future objects represent the eventual result of asynchronous computations. You can block on a Future using get(), but consider non-blocking alternatives if waiting will hold up other tasks
 
-**Code with Structured Concurrency**
+**Complete Sample**
 
 ```java
 import java.util.concurrent.*;
 
-public class ImageProcessor {
-    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor(); 
+public class RequestProcessingApp {
+    private static RequestProcessor requestProcessor = new RequestProcessor();
 
-    public void processImages(List<String> imageUrls) {
-        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) { 
-            imageUrls.forEach(url -> scope.fork(() -> processSingleImage(url)));
+    public static void main(String[] args) {
+        requestProcessor.start(); 
+    }
+}
 
-            scope.join();           // Wait for all tasks to complete
-            scope.throwIfFailed();  // Propagate any exceptions
-        } catch (ExecutionException | InterruptedException e) {
-            System.err.println("Image processing failed: " + e.getMessage());
+class RequestProcessor {
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public void start() {
+        while (true) {
+            Request request = listenForRequests(); // Placeholder - You'll need to implement this
+            executor.submit(() -> processRequest(request));
         }
     }
 
-    private void processSingleImage(String imageUrl) {
+    private void processRequest(Request request) {
         try {
-            // Simulate image download, processing, and upload
-            downloadImage(imageUrl);
-            processImage(imageUrl);
-            uploadImage(imageUrl);
+            var preprocessedData = preProcess(request);
+
+            // Concurrent external calls using virtual threads
+            Future<ResultA> futureResultA = executor.submit(() -> callExternalServiceA(preprocessedData));
+            Future<ResultB> futureResultB = executor.submit(() -> callExternalServiceB(preprocessedData));
+
+            ResultA resultA = futureResultA.get(); // May block if the service call isn't finished
+            ResultB resultB = futureResultB.get(); // May also block
+
+            Response response = aggregateAndRespond(request, resultA, resultB);
+            sendResponse(response); // Placeholder - You'll need to implement this
+
         } catch (Exception e) {
-            scope.close(); // Cancel sibling tasks, propagate failure
-        } 
+            handleProcessingError(request, e);
+        }
     }
 
-    // ... Helper methods (downloadImage, processImage, uploadImage)
+    // Placeholder helper methods – Implementations will depend on your application 
+    private Object preProcess(Request request) { 
+        // Some preprocessing logic
+        return new Object(); 
+    }
+
+    private ResultA callExternalServiceA(Object data) { 
+        // Simulate call to an external service
+        return new ResultA(); // Placeholder
+    }
+
+    private ResultB callExternalServiceB(Object data) { 
+        // Simulate call to another external service
+        return new ResultB(); // Placeholder
+    }
+
+    private Response aggregateAndRespond(Request request, ResultA resultA, ResultB resultB) { 
+        // Your logic to combine results A and B into a response
+        return new Response(); // Placeholder
+    }
+
+    private void sendResponse(Response response) {
+        // Implement logic to send the response (e.g., network, etc.) 
+    }
+
+    private void handleProcessingError(Request request, Exception e) { 
+        // Your error handling (logging, etc.)
+    }
 }
+
+// Placeholder classes
+class Request { } 
+class ResultA { }
+class ResultB { }
+class Response { }
 ```
 
-**Explanation**
+**Important Notes**:
 
-**StructuredTaskScope.ShutdownOnFailure**: Automatically cancels remaining tasks if one of them fails
+**Placeholders**: You'll need to implement listenForRequests, sendResponse, and more detailed handling of the service calls and their results based on your specific use case
 
-**forEach + scope.fork**: Creates subtasks within the scope; subtasks are processed concurrently
+**Error Handling**: Consider how you want to propagate errors. You might throw custom exceptions or send error responses
 
-**scope.join**: Awaits all subtasks. Unlike traditional thread joins, blocks at most once
-
-**scope.throwIfFailed()**: Throws an exception if any subtask has failed
-
-**scope.close() within processSingleImage**: Propagates failures, triggering the parent scope's ShutdownOnFailure policy
-
-**Advantages**
-
-**Cleaner Error Handling**: If any image processing fails, all other tasks get canceled automatically. Failure is handled centrally in the outer try-catch
-
-**Avoids Resource Leaks**: The tasks can manage resources (images, open files) within a try-with-resources block tied to the task lifecycle
-
-**Improved performance**: Using the Executors.newVirtualThreadPerTaskExecutor() with virtual threads helps optimize for many concurrent tasks
-
-**Additional Notes**
-
-Consider different shutdown policies (StructuredTaskScope.ShutdownOnSuccess, custom implementations) if cancellation isn't always desired
-
-This pattern works well for composable tasks; use more sophisticated concurrency solutions for scenarios needing fine-grained control
+**Blocking**: Future.get() blocks the current thread. For a truly non-blocking system, explore reactive paradigms or structured concurrency (Project Loom)
 
 ## 7. Vector API 5 (JEP 438)
 
