@@ -6,17 +6,17 @@ Java 20 language specification: https://docs.oracle.com/javase/specs/jls/se20/ht
 
 For example: 
 
-please provide me a simple java code sample about Java 20 Record Patterns (JEP 432)
+please provide me a simple java code sample about Java Record Patterns (JEP 432)
 
-please explain me Java 20 Record Patterns (JEP 432)
+please explain me Java Record Patterns (JEP 432)
 
 ## Google Gemini prompt (https://gemini.google.com/app)
 
 For example: 
 
-please provide me a simple java code sample about Java 20 Record Patterns (JEP 432)
+please provide me a simple java code sample about Java Record Patterns (JEP 432)
 
-please explain me Java 20 Record Patterns (JEP 432)
+please explain me Java Record Patterns (JEP 432)
 
 ## 1. Record Patterns (JEP 432)
 
