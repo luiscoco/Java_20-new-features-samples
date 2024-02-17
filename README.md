@@ -460,44 +460,58 @@ https://openjdk.org/jeps/436
 
 Let's explore Java Virtual Threads (JEP 436).
 
-The Challenge: Traditional Threads
+**The Challenge: Traditional Threads**
 
-Before virtual threads, Java exclusively used platform threads. Here's the thing about platform threads:
+Before **virtual threads**, Java exclusively used **platform threads**. Here's the thing about platform threads:
 
-Resource Intensive: Each platform thread maps directly to an operating system thread. OS threads consume significant memory and incur a performance overhead when context switching between them.
-Blocking I/O Bottleneck: When a platform thread performs a blocking operation (like network or file I/O), it sits idle, wasting resources while waiting for a response. This limits scalability, especially for applications handling many concurrent requests.
-Enter Virtual Threads
+**Resource Intensive**: Each platform thread maps directly to an operating system thread. OS threads consume significant memory and incur a performance overhead when context switching between them
 
-Virtual threads provide a solution to these challenges.  Key attributes:
+**Blocking I/O Bottleneck**: When a platform thread performs a blocking operation (like network or file I/O), it sits idle, wasting resources while waiting for a response
 
-Lightweight: Virtual threads are managed by the Java Virtual Machine (JVM). They aren't tied one-to-one with OS threads. The JVM can multiplex many virtual threads onto a smaller pool of platform threads (called carrier threads).
-Non-Blocking (Mostly): Virtual threads automatically yield (pause) during blocking operations. This means a carrier thread won't sit idle; it can pick up and run other virtual threads that are ready.
+This limits scalability, especially for applications handling many concurrent requests
+
+**Virtual Threads** provide a solution to these challenges.  Key attributes:
+
+**Lightweight**: Virtual threads are managed by the Java Virtual Machine (JVM). They aren't tied one-to-one with OS threads. The JVM can multiplex many virtual threads onto a smaller pool of platform threads (called carrier threads).
+
+**Non-Blocking (Mostly)**: Virtual threads automatically yield (pause) during blocking operations. This means a carrier thread won't sit idle; it can pick up and run other virtual threads that are ready.
 Benefits
 
-Scalability: Virtual threads make it way cheaper to support massive concurrency. You can handle many more concurrent connections or tasks before running into resource limits. This is great for I/O-heavy applications (think high-volume web servers).
-Simplified Programming: Traditionally, developers used techniques like asynchronous and reactive programming to combat blocking problems. Virtual threads bring much of the performance benefit without some of the complex coding paradigms.
-JVM Compatibility: As virtual threads live in the JVM, compatibility with much of the existing Java ecosystem is seamless. Existing code doesn't necessarily need rewriting to reap the benefits.
-How You'll Use Them
+**Scalability**: Virtual threads make it way cheaper to support massive concurrency. You can handle many more concurrent connections or tasks before running into resource limits
+
+This is great for I/O-heavy applications (think high-volume web servers)
+
+**Simplified Programming**: Traditionally, developers used techniques like asynchronous and reactive programming to combat blocking problems. Virtual threads bring much of the performance benefit without some of the complex coding paradigms
+
+**JVM Compatibility**: As virtual threads live in the JVM, compatibility with much of the existing Java ecosystem is seamless. Existing code doesn't necessarily need rewriting to reap the benefits
+
+**How You'll Use Them**
 
 Virtual threads don't change Java syntax. Existing tools and idioms still work:
 
-Java
+```java
 Thread thread = Thread.startVirtualThread(() -> { 
     // Task code runs on a virtual thread
 }); 
-Usa el código con precaución.
-Note: Libraries that perform blocking I/O may need updates to be fully compatible with virtual threads. The JDK has been evolving to be "virtual thread aware".
+```
 
-Example Use-Case
+**Note**: Libraries that perform blocking I/O may need updates to be fully compatible with virtual threads. The JDK has been evolving to be "virtual thread aware"
+
+**Example Use-Case**
 
 Imagine a web server receiving thousands of requests per second:
 
-Old Way (Platform Threads): With a limited pool of platform threads, many might block on I/O, limiting the server's ability to process new requests.
-Virtual Thread Way: Thousands of virtual threads can exist. Blocking threads gracefully yield, reducing wasted resources and making the server much more responsive.
-Important Considerations
+**Old Way (Platform Threads)**: With a limited pool of platform threads, many might block on I/O, limiting the server's ability to process new requests
 
-While in preview as of JDK 22, virtual threads are on track for standardization. The API, however, might see minor changes and improvements in future releases.
-Debugging requires some care to understand virtual threads vs. the underlying carrier threads.
+**Virtual Thread Way**: Thousands of virtual threads can exist. Blocking threads gracefully yield, reducing wasted resources and making the server much more responsive
+
+**Important Considerations**
+
+While in preview as of JDK 22, virtual threads are on track for standardization. The API, however, might see minor changes and improvements in future releases
+
+Debugging requires some care to understand virtual threads vs. the underlying carrier threads
+
+
 
 ## 6. Structured Concurrency (JEP 437)
 
