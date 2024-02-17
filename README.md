@@ -94,6 +94,61 @@ Record patterns shine particularly when:
 
 **Important note**:  For simple access to record components, the built-in accessors (e.g., person.name()) are often enough. Record patterns truly come into play with conditional logic and more complex object handling
 
+Let's delve into a slightly **more advanced application of Java Record Patterns**
+
+Imagine a scenario where you receive geometric data in a text format.  We'll leverage record patterns to elegantly parse and handle different shapes.
+
+```java
+record Shape(String type) {}
+record Circle(String type, double radius) extends Shape {}
+record Rectangle(String type, double width, double height) extends Shape {}
+record Triangle(String type, double base, double height) extends Shape {}
+
+public class ShapeParser {
+
+    public static Shape parseShape(String input) {
+        switch (input.split(":")[ [0]) {  // Simple "Type:Data" parsing
+            case "Circle" -> {
+                double radius = Double.parseDouble(input.split(":")[1]);
+                return new Circle("Circle", radius);
+            }
+            case "Rectangle" -> {
+                String[] dimensions = input.split(":")[1].split(",");
+                double width = Double.parseDouble(dimensions[0]);
+                double height = Double.parseDouble(dimensions[1]);
+                return new Rectangle("Rectangle", width, height);
+            }
+            case "Triangle" -> {
+                String[] dimensions = input.split(":")[1].split(",");
+                double base = Double.parseDouble(dimensions[0]);
+                double height = Double.parseDouble(dimensions[1]);
+                return new Triangle("Triangle", base, height);
+            }
+            default -> throw new IllegalArgumentException("Unknown shape type: " + input);
+        }
+    }
+
+    public static void main(String[] args) {
+        String inputData = "Circle:5.2\nRectangle:3,6\nTriangle:4,2";
+
+        for (String line : inputData.split("\n")) {
+            Shape shape = parseShape(line);
+            processShape(shape);
+        }
+    }
+
+    static void processShape(Shape shape) {
+        if (shape instanceof Circle(double radius)) {
+            System.out.println("Circle with radius: " + radius);
+        } else if (shape instanceof Rectangle(double width, double height)) {
+            System.out.println("Rectangle area: " + (width * height));
+        } else if (shape instanceof Triangle(double base, double height)) {
+            System.out.println("Triangle area: " + (0.5 * base * height));
+        }
+    }
+}
+```
+
 ## 2. Pattern Matching for switch (JEP 433)
 
 https://openjdk.org/jeps/453
