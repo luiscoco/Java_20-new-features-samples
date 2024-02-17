@@ -438,7 +438,7 @@ Since it's an Incubator feature, you'll likely need to enable it with command-li
 
 https://openjdk.org/jeps/436
 
-Let's explore Java Virtual Threads (JEP 436).
+Let's explore Java Virtual Threads (JEP 436)
 
 **The Challenge: Traditional Threads**
 
@@ -450,12 +450,15 @@ Before **virtual threads**, Java exclusively used **platform threads**. Here's t
 
 This limits scalability, especially for applications handling many concurrent requests
 
-**Virtual Threads** provide a solution to these challenges.  Key attributes:
+**Virtual Threads** provide a solution to these challenges
 
-**Lightweight**: Virtual threads are managed by the Java Virtual Machine (JVM). They aren't tied one-to-one with OS threads. The JVM can multiplex many virtual threads onto a smaller pool of platform threads (called carrier threads).
+**Key attributes**:
 
-**Non-Blocking (Mostly)**: Virtual threads automatically yield (pause) during blocking operations. This means a carrier thread won't sit idle; it can pick up and run other virtual threads that are ready.
-Benefits
+**Lightweight**: Virtual threads are managed by the Java Virtual Machine (JVM). They aren't tied one-to-one with OS threads. The JVM can multiplex many virtual threads onto a smaller pool of platform threads (called carrier threads)
+
+**Non-Blocking (Mostly)**: Virtual threads automatically yield (pause) during blocking operations. This means a carrier thread won't sit idle; it can pick up and run other virtual threads that are ready
+
+**Benefits**
 
 **Scalability**: Virtual threads make it way cheaper to support massive concurrency. You can handle many more concurrent connections or tasks before running into resource limits
 
@@ -491,164 +494,7 @@ While in preview as of JDK 22, virtual threads are on track for standardization.
 
 Debugging requires some care to understand virtual threads vs. the underlying carrier threads
 
-Let's delve into a **more advanced** scenario highlighting the strengths of Java Virtual Threads (JEP 436)
-
-**Scenario: Network Request Processor**
-
-Imagine you're building a high-throughput service that coordinates processing of a constant stream of incoming network requests.  Here's a basic structure:
-
-**Listen**: Constantly accept new incoming requests
-
-**Pre-Process**: Basic validation and transformation of the incoming request data
-
-**External Calls**: Call multiple backend systems (databases, other services) concurrently to fetch the information needed for a response
-
-**Aggregate & Respond**: Combine results from external calls and compose a response sent back to the request initiator
-
-**The Challenge**: Traditional platform thread usage limits scalability due to the potential overhead of blocking I/O during the 'External Calls' step
-
-```java
-import java.util.concurrent.*;
-
-public class RequestProcessor {
-    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-
-    public void start() {
-        // Assuming a hypothetical listenForRequests() method here...
-        while (true) {
-            Request request = listenForRequests(); 
-            executor.submit(() -> processRequest(request)); 
-        }
-    }
-
-    private void processRequest(Request request) {
-        try {
-            var preprocessedData = preProcess(request); 
-
-            // Concurrent external calls using virtual threads 
-            Future<ResultA> futureResultA = executor.submit(() -> callExternalServiceA(preprocessedData));
-            Future<ResultB> futureResultB = executor.submit(() -> callExternalServiceB(preprocessedData)); 
-
-            ResultA resultA = futureResultA.get(); // Will likely yield 
-            ResultB resultB = futureResultB.get(); // May yield too
-
-            Response response = aggregateAndRespond(request, resultA, resultB); 
-            sendResponse(response);
-
-        } catch (Exception e) {
-            handleProcessingError(request, e); 
-        }
-    }
-
-    // ... Helper methods (preProcess, callExternalServiceA, etc.) 
-}
-```
-
-**Why Virtual Threads**
-
-**High Concurrency**: Easily handles thousands of incoming requests, using a pool of carrier threads much smaller than the number of active virtual threads
-
-**Efficient Blocking**: When futureResultA.get() and futureResultB.get() encounter the inevitable network blocking, virtual threads yield gracefully. The carrier thread isn't stalled; it can execute other ready virtual threads
-
-**Simplified Code**: Code appears similar to the synchronous thread-based style due to virtual thread's non-blocking nature, while achieving far superior resource utilization
-
-**Tuning**
-
-**Pool Size**: You'd use Executors.newFixedThreadPool() instead of newVirtualThreadPerTaskExecutor and tune the pool size based on workload and hardware to make sure virtual threads aren't context-switching more than they need to
-
-**Monitoring**: Observability tools will be important to analyze virtual thread scheduling and usage
-
-**Considerations**
-
-**Debug Support**: Tools are actively evolving to provide meaningful tracing and analysis for virtual threads
-
-**Not for CPU-bound Work**: CPU-intensive tasks, without I/O, won't see the dramatic improvements offered by virtual threads
-
-**Want to make it even more advanced?**
-
-We could introduce **timeouts**,  a **non-blocking asynchronous** style using **CompletableFuture** for backend calls,  or add **fault-tolerance** and  **retries** into the mix.
-
-## 6. Structured Concurrency (JEP 437)
-
-https://openjdk.org/jeps/437
-
-Let's break down Java Structured Concurrency (JEP 437).
-
-The Problem with **Traditional Threads**
-
-In traditional Java, managing multiple tasks with **threads** can get messy:
-
-**Error Handling**: If one thread throws an exception, other related threads might continue oblivious, leading to inconsistent states and hard-to-find bugs
-
-**Cancellation**: Manually cancelling a group of threads requires intricate bookkeeping and careful coordination
-
-**Observability**: It's challenging to get a unified view of a group of related threads or tasks while debugging your application
-
-**What is Structured Concurrency?**
-
-Structured concurrency introduces a programming paradigm built upon concepts from other languages
-
-Its goal is to make working with asynchronous operations and multiple threads much easier to manage within the Java context. Here's the core idea:
-
-Treat a group of concurrent tasks as a single unit of work. This unit should have a clear structure (often parent-child) and coordinated lifecycle management
-
-**Key Components**
-
-**StructuredTaskScope**:
-
-Defines a boundary for a set of related tasks
-
-Provides automatic cancellation of child tasks if the parent scope fails or is shut down
-
-Lets you handle errors from all tasks centrally
-
-**fork()** method:
-
-Launches a new task as a child within a **StructuredTaskScope**
-
-The parent-child relationship offers coordinated error handling and cancellation
-
-**join()** method:
-
-Allows the current task to wait until all child tasks complete
-
-Unlike traditional thread join(), it is structured and blocks at most once even if several tasks are forked
-
-**throwIfFailed()** method:
-
-Signals that the StructuredTaskScope failed, aggregating exceptions from any of its child tasks
-
-**Benefits**
-
-**Simplified Control Flow**: The parent-child relationships create a clear execution structure, improving code readability
-
-**Robust Error Handling**: Exceptions automatically propagate within a scope, allowing for graceful cancellation and overall failure management in a central location
-
-**Cleaner Cancellation**: StructuredTaskScope provides built-in policies for managing task cancellation when errors occur or if you explicitly shut down the task unit
-
-**Better Observability**: Debugging tools or profilers can more easily identify relationships between tasks, improving their ability to trace errors or collect related performance data
-
-**Example (Simplified)**
-
-```java
-try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-    scope.fork(() -> doTaskA());
-    scope.fork(() -> doTaskB());
-
-    scope.join(); // Wait for tasks to complete
-    scope.throwIfFailed(); // Propagate any exceptions
-} catch (Exception e) {
-    // Handle errors from Task A and Task B in one place
-}
-```
-
-**Important Notes**
-
-Structured Concurrency was an Incubator feature in JDK 19 and JDK 20, re-incubated in 21, and has recently achieved "Preview" status for JDK 22. This means the API is still evolving and could undergo minor changes
-
-Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**). There'll be situations where more mature threading models are still the right choice
-
-Let's explore a **more advanced example** showcasing Java's Structured Concurrency (JEP 437)
+Let's explore a **more advanced example** showcasing Java's Virtual Threads (JEP 436)
 
 Here's a complete application example using your RequestProcessor along with explanations and some placeholder implementations for context
 
@@ -661,8 +507,6 @@ They're ideal for I/O bound tasks (like the external service calls)
 **Asynchronous Processing**: Processing requests are submitted to an executor service to run asynchronously, improving responsiveness
 
 **Futures**: Future objects represent the eventual result of asynchronous computations. You can block on a Future using get(), but consider non-blocking alternatives if waiting will hold up other tasks
-
-**Complete Sample**
 
 ```java
 import java.util.concurrent.*;
@@ -748,6 +592,88 @@ class Response { }
 **Error Handling**: Consider how you want to propagate errors. You might throw custom exceptions or send error responses
 
 **Blocking**: Future.get() blocks the current thread. For a truly non-blocking system, explore reactive paradigms or structured concurrency (Project Loom)
+
+## 6. Structured Concurrency (JEP 437)
+
+https://openjdk.org/jeps/437
+
+Let's break down Java Structured Concurrency (JEP 437).
+
+The Problem with **Traditional Threads**
+
+In traditional Java, managing multiple tasks with **threads** can get messy:
+
+**Error Handling**: If one thread throws an exception, other related threads might continue oblivious, leading to inconsistent states and hard-to-find bugs
+
+**Cancellation**: Manually cancelling a group of threads requires intricate bookkeeping and careful coordination
+
+**Observability**: It's challenging to get a unified view of a group of related threads or tasks while debugging your application
+
+**What is Structured Concurrency?**
+
+Structured concurrency introduces a programming paradigm built upon concepts from other languages
+
+Its goal is to make working with asynchronous operations and multiple threads much easier to manage within the Java context. Here's the core idea:
+
+Treat a group of concurrent tasks as a single unit of work. This unit should have a clear structure (often parent-child) and coordinated lifecycle management
+
+**Key Components**
+
+**StructuredTaskScope**:
+
+Defines a boundary for a set of related tasks
+
+Provides automatic cancellation of child tasks if the parent scope fails or is shut down
+
+Lets you handle errors from all tasks centrally
+
+**fork()** method:
+
+Launches a new task as a child within a **StructuredTaskScope**
+
+The parent-child relationship offers coordinated error handling and cancellation
+
+**join()** method:
+
+Allows the current task to wait until all child tasks complete
+
+Unlike traditional thread join(), it is structured and blocks at most once even if several tasks are forked
+
+**throwIfFailed()** method:
+
+Signals that the StructuredTaskScope failed, aggregating exceptions from any of its child tasks
+
+**Benefits**
+
+**Simplified Control Flow**: The parent-child relationships create a clear execution structure, improving code readability
+
+**Robust Error Handling**: Exceptions automatically propagate within a scope, allowing for graceful cancellation and overall failure management in a central location
+
+**Cleaner Cancellation**: StructuredTaskScope provides built-in policies for managing task cancellation when errors occur or if you explicitly shut down the task unit
+
+**Better Observability**: Debugging tools or profilers can more easily identify relationships between tasks, improving their ability to trace errors or collect related performance data
+
+**Example (Simplified)**
+
+```java
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    scope.fork(() -> doTaskA());
+    scope.fork(() -> doTaskB());
+
+    scope.join(); // Wait for tasks to complete
+    scope.throwIfFailed(); // Propagate any exceptions
+} catch (Exception e) {
+    // Handle errors from Task A and Task B in one place
+}
+```
+
+**Important Notes**
+
+Structured Concurrency was an Incubator feature in JDK 19 and JDK 20, re-incubated in 21, and has recently achieved "Preview" status for JDK 22. This means the API is still evolving and could undergo minor changes
+
+Structured Concurrency aims to enhance concurrency in Java and coexist with existing tools (like **Executors**). There'll be situations where more mature threading models are still the right choice
+
+
 
 ## 7. Vector API 5 (JEP 438)
 
