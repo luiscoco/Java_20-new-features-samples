@@ -492,12 +492,85 @@ While in preview as of JDK 22, virtual threads are on track for standardization.
 Debugging requires some care to understand virtual threads vs. the underlying carrier threads
 
 
-
 ## 6. Structured Concurrency (JEP 437)
 
 https://openjdk.org/jeps/437
 
 
+
+Let's explore a **more advanced example** showcasing Java's Structured Concurrency (JEP 437). Here's a scenario that demonstrates error handling, cancellation, and the benefits of StructuredTaskScope:
+
+**Scenario**: Image Processing Application
+
+Imagine you're building an image processing application that performs the following:
+
+**Fetch Images**: Fetch a list of image URLs from a remote server
+
+**Download**: Download each image in parallel
+
+**Process**: Perform a computationally intensive image processing operation on each image
+
+**Upload**: Upload the processed images back to the server
+
+**Code with Structured Concurrency**
+
+```java
+import java.util.concurrent.*;
+
+public class ImageProcessor {
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor(); 
+
+    public void processImages(List<String> imageUrls) {
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) { 
+            imageUrls.forEach(url -> scope.fork(() -> processSingleImage(url)));
+
+            scope.join();           // Wait for all tasks to complete
+            scope.throwIfFailed();  // Propagate any exceptions
+        } catch (ExecutionException | InterruptedException e) {
+            System.err.println("Image processing failed: " + e.getMessage());
+        }
+    }
+
+    private void processSingleImage(String imageUrl) {
+        try {
+            // Simulate image download, processing, and upload
+            downloadImage(imageUrl);
+            processImage(imageUrl);
+            uploadImage(imageUrl);
+        } catch (Exception e) {
+            scope.close(); // Cancel sibling tasks, propagate failure
+        } 
+    }
+
+    // ... Helper methods (downloadImage, processImage, uploadImage)
+}
+```
+
+**Explanation**
+
+**StructuredTaskScope.ShutdownOnFailure**: Automatically cancels remaining tasks if one of them fails
+
+**forEach + scope.fork**: Creates subtasks within the scope; subtasks are processed concurrently
+
+**scope.join**: Awaits all subtasks. Unlike traditional thread joins, blocks at most once
+
+**scope.throwIfFailed()**: Throws an exception if any subtask has failed
+
+**scope.close() within processSingleImage**: Propagates failures, triggering the parent scope's ShutdownOnFailure policy
+
+**Advantages**
+
+**Cleaner Error Handling**: If any image processing fails, all other tasks get canceled automatically. Failure is handled centrally in the outer try-catch
+
+**Avoids Resource Leaks**: The tasks can manage resources (images, open files) within a try-with-resources block tied to the task lifecycle
+
+**Improved performance**: Using the Executors.newVirtualThreadPerTaskExecutor() with virtual threads helps optimize for many concurrent tasks
+
+**Additional Notes**
+
+Consider different shutdown policies (StructuredTaskScope.ShutdownOnSuccess, custom implementations) if cancellation isn't always desired
+
+This pattern works well for composable tasks; use more sophisticated concurrency solutions for scenarios needing fine-grained control
 
 ## 7. Vector API 5 (JEP 438)
 
