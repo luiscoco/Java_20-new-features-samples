@@ -827,3 +827,108 @@ Enable preview features and incubating APIs:
 
 --enable-preview --add-modules jdk.incubator.vector
 
+Let's craft a **more advanced example** that highlights some interesting capabilities of the **Java Vector API 5**
+
+**Scenario: Mandelbrot Set Calculation**
+
+The **Mandelbrot** set is a famous **fractal** exhibiting beautiful, complex **patterns**. Calculating it computationally involves iterating over a complex number grid, which lends itself well to vectorization
+
+Let's integrate our Mandelbrot calculation into a complete Java application using the JavaFX library to display the resulting fractal image
+
+```java
+import jdk.incubator.vector.*;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+
+public class MandelbrotRenderer extends Application {
+
+    private static final int WIDTH = 800;
+    private static final int HEIGHT = 600;
+    private static final int MAX_ITERATIONS = 255;
+    private static final double ESCAPE_RADIUS_SQ = 4.0;
+
+    @Override
+    public void start(Stage primaryStage) {
+        WritableImage image = new WritableImage(WIDTH, HEIGHT);
+        PixelWriter pixelWriter = image.getPixelWriter();
+
+        calculateMandelbrot(image);
+
+        Pane root = new Pane();
+        root.getChildren().add(new javafx.scene.image.ImageView(image));
+
+        Scene scene = new Scene(root, WIDTH, HEIGHT);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Mandelbrot Fractal");
+        primaryStage.show();
+    }
+
+    private void calculateMandelbrot(WritableImage image) {
+        double minReal = -2.0;
+        double maxReal = 0.5;
+        double minImag = -1.25;
+        double maxImag = 1.25;
+
+        float[] output = new float[WIDTH * HEIGHT];
+
+        Mandelbrot mandelbrot = new Mandelbrot();
+        mandelbrot.calculateMandelbrot(WIDTH, HEIGHT, minReal, maxReal, minImag, maxImag, output);
+
+        // Map iteration counts to colors
+        for (int i = 0; i < output.length; i++) {
+            int iterations = (int) output[i];
+            if (iterations == MAX_ITERATIONS) {
+                pixelWriter.setColor(i % WIDTH, i / WIDTH, Color.BLACK);
+            } else {
+                // Apply your color gradient here
+                pixelWriter.setColor(i % WIDTH, i / WIDTH, Color.hsb(360.0 * iterations / MAX_ITERATIONS, 1.0, 1.0));
+
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
+
+// Mandelbrot computation class (same as before)
+class Mandelbrot {
+    // ... (Mandelbrot calculation logic) 
+}
+```
+
+**Key Changes**
+
+**JavaFX**: We use JavaFX for a simple display
+
+**WritableImage**: Stores the pixel data
+
+**PixelWriter**: Lets us modify the image
+
+**ImageView**: Renders the image on a GUI window
+
+**calculateMandelbrot**: It now modifies a WritableImage instead of just a raw float array
+
+**Coloring**: A basic color gradient is applied based on iteration counts
+
+**Remember**
+
+**Vector API**: Make sure you're using a JDK supporting the Vector API (JDK 20+) with preview features and the incubator module enabled:
+
+--enable-preview --add-modules jdk.incubator.vector
+
+**Coloring**: Get creative! Experiment with different color palettes.
+
+**Enhancements**
+
+**Zoom & Pan**: Add interactive zoom and pan controls to the ImageView
+
+**Optimization**: Experiment with Vector API variations or loop tiling for potential performance tweaks
+
+
