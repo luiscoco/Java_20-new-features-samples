@@ -755,32 +755,35 @@ public class ImageProcessor {
 
 https://openjdk.org/jeps/438
 
-Let's break down the Java Vector API 5 (JEP 438).
+Let's break down the Java Vector API 5 (JEP 438)
 
-Background
+**Background**
 
-SIMD: Modern CPUs have Single Instruction, Multiple Data (SIMD) capabilities. They can perform the same operation on multiple data elements at once (e.g., adding four pairs of numbers simultaneously).
-Java's Challenge: Traditionally, Java couldn't fully exploit SIMD. Loops had to be manually unrolled and optimized, a process both error-prone and hardware-specific.
-What is the Vector API?
+**SIMD**: Modern CPUs have Single Instruction, Multiple Data (SIMD) capabilities. They can perform the same operation on multiple data elements at once (e.g., adding four pairs of numbers simultaneously)
 
-The Vector API aims to bridge this gap by introducing a platform-agnostic way to express vector computations that can be reliably translated into optimized SIMD instructions by the JVM (specifically, the HotSpot C2 compiler).
+**Java's Challenge**: Traditionally, Java couldn't fully exploit SIMD. Loops had to be manually unrolled and optimized, a process both error-prone and hardware-specific
 
-Key Concepts
+**What is the Vector API?**
 
-Vectors: The core concept is the Vector<E> class. It represents a fixed-size sequence of values of a primitive type (e.g., Vector<int>). Vector sizes match underlying hardware (e.g., 256 bits for AVX2).
+The Vector API aims to bridge this gap by introducing a platform-agnostic way to express vector computations that can be reliably translated into optimized SIMD instructions by the JVM (specifically, the HotSpot C2 compiler)
 
-Species: Vector<E> is parameterized by a Species defining the element type (int, float, etc.) and vector size.  This allows portability across different hardware.
+**Key Concepts**
 
-Operations: The API provides rich operations on vectors:
+**Vectors**: The core concept is the Vector<E> class. It represents a fixed-size sequence of values of a primitive type (e.g., Vector<int>). Vector sizes match underlying hardware (e.g., 256 bits for AVX2)
+
+**Species**: Vector<E> is parameterized by a Species defining the element type (int, float, etc.) and vector size.  This allows portability across different hardware
+
+**Operations**: The API provides rich operations on vectors:
 
 Arithmetic: Add, subtract, multiply, divide
-Logical: Bitwise operations, comparisons
-Transcendental: Trigonometric functions, logarithms, etc.
-Vector Masks: Masks enable conditional operations on vector elements. This is key for handling scenarios where not all elements of a vector should be processed.
 
-Example
+**Logical**: Bitwise operations, comparisons
 
-Java
+**Transcendental**: Trigonometric functions, logarithms, etc
+
+**Vector Masks**: Masks enable conditional operations on vector elements. This is key for handling scenarios where not all elements of a vector should be processed
+
+```java
 // Species for 32-bit floats,  (likely) using 256-bit vectors
 var species = FloatVector.SPECIES_256; 
 
@@ -796,22 +799,31 @@ for (int i = 0; i < a.length; i += species.length()) {
     var vC = vA.mul(vB).add(vA); 
     vC.intoArray(c, i);
 }
-Usa el código con precaución.
-Benefits
+```
 
-Performance: Well-written vector code using this API can significantly outperform traditional scalar loops due to SIMD parallelism.
-Clarity: The Vector API abstracts away the low-level complexities of SIMD, providing a clean way to express vector computations.
-Portability: Vector code with the right Species should run optimally on different hardware that supports SIMD instructions.
-JEP 438: Fifth Incubation & Beyond
+**Benefits**
+
+**Performance**: Well-written vector code using this API can significantly outperform traditional scalar loops due to SIMD parallelism
+
+**Clarity**: The Vector API abstracts away the low-level complexities of SIMD, providing a clean way to express vector computations
+
+**Portability**: Vector code with the right Species should run optimally on different hardware that supports SIMD instructions
+
+**JEP 438: Fifth Incubation & Beyond**
 
 JEP 438 is the fifth round of incubation for the Vector API. Its goals include:
 
-Small bug fixes and performance improvements: Refining the existing API's implementation.
-Alignment with Project Valhalla: Ensuring proper integration of the Vector API with Valhalla's advanced value types and generics.
-Getting Started
+Small bug fixes and performance improvements: Refining the existing API's implementation
+
+Alignment with Project Valhalla: Ensuring proper integration of the Vector API with Valhalla's advanced value types and generics
+
+**Getting Started**. 
 
 Since it's an incubating feature, you'll need:
 
 A JDK supporting JEP 438 (JDK 20+).
+
 Enable preview features and incubating APIs:
+
 --enable-preview --add-modules jdk.incubator.vector
+
