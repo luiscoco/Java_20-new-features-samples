@@ -903,7 +903,65 @@ class Mandelbrot {
 }
 ```
 
-**Key Changes**
+```java
+import jdk.incubator.vector.*;
+
+public class Mandelbrot {
+
+    private static final int MAX_ITERATIONS = 255;
+    private static final double ESCAPE_RADIUS_SQ = 4.0;
+
+    public void calculateMandelbrot(int width, int height, double minReal, double maxReal, 
+                                    double minImag, double maxImag, float[] output) {
+
+        FloatVector realStep = FloatVector.broadcast(FloatVector.SPECIES_256, (maxReal - minReal) / width);
+        FloatVector imagStep = FloatVector.broadcast(FloatVector.SPECIES_256, (maxImag - minImag) / height);
+
+        FloatVector realStart = FloatVector.broadcast(FloatVector.SPECIES_256, minReal);
+        FloatVector imagStart = FloatVector.broadcast(FloatVector.SPECIES_256, minImag);
+
+        for (int y = 0; y < height; y++) {
+            FloatVector creal = realStart; 
+            FloatVector cimag = imagStart.add(imagStep.mul(y, FloatVector.SPECIES_256));
+
+            for (int x = 0; x < width; x += FloatVector.SPECIES_256.length()) {
+                FloatVector zr = creal;
+                FloatVector zi = cimag;
+
+                FloatVector mask = FloatVector.zero(FloatVector.SPECIES_256);
+                int iteration = 0;
+
+                for (; iteration < MAX_ITERATIONS; iteration++) {
+                    FloatVector zr2 = zr.mul(zr);
+                    FloatVector zi2 = zi.mul(zi);
+
+                    // |zr + zi|^2 < ESCAPE_RADIUS_SQ
+                    FloatVector escapeRadiusCheck = zr2.add(zi2).compare(VectorOperators.LT, ESCAPE_RADIUS_SQ);
+
+                    mask = mask.blend(iteration, escapeRadiusCheck); // Update iterations where points 'escaped'
+
+                    // Mandelbrot iteration (z = z^2 + c)
+                    FloatVector temp = zr2.sub(zi2).add(creal); // Complex arithmetic ops
+                    zi = zr.mul(zi).mul(2.0f).add(cimag);
+                    zr = temp;
+                }
+
+                mask.blend(MAX_ITERATIONS, mask.not()).intoArray(output, y * width + x);
+
+                creal = creal.add(realStep);
+            }
+        }
+    }
+}
+```
+
+**JavaFX Lifecycle**: Calling **launch** does a lot behind the scenes
+
+- Initializes the JavaFX toolkit
+
+- Calls your **start** method (which you override in your Application subclass)
+
+- Manages the display of your UI and event handling
 
 **JavaFX**: We use JavaFX for a simple display
 
